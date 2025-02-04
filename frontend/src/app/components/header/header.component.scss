@@ -1,0 +1,13 @@
+.app-header {
+  background-color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mat-toolbar {
+  display: flex;
+  justify-content: space-between;
+}
+
+.mat-toolbar .mat-icon {
+  font-size: 32px;
+}
