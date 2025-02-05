@@ -36,8 +36,7 @@
               "src/styles.scss"
             ],
             "scripts": [
-              "node_modules/video.js/dist/video.min.js",
-              "node_modules/simple-peer/simplepeer.min.js"
+              "node_modules/video.js/dist/video.min.js"
             ]
           },
           "configurations": {
