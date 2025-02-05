@@ -17,6 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
+            "allowedCommonJsDependencies": ["simple-peer"],
             "outputPath": "dist/frontend",
             "index": "src/index.html",
             "main": "src/main.ts",
@@ -34,7 +35,10 @@
               "node_modules/video.js/dist/video-js.min.css",
               "src/styles.scss"
             ],
-            "scripts": ["node_modules/video.js/dist/video.min.js"]
+            "scripts": [
+              "node_modules/video.js/dist/video.min.js",
+              "node_modules/simple-peer/simplepeer.min.js"
+            ]
           },
           "configurations": {
             "production": {
