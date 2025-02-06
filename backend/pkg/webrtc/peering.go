@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/ferencovonmatterhorn/ko-cast/pkg/utils"
@@ -19,7 +18,6 @@ var (
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-	indexTemplate = &template.Template{}
 
 	// lock for peerConnections and trackLocals
 	listLock        sync.RWMutex
