@@ -1,8 +1,7 @@
-package main
+package webrtc
 
 import (
 	"encoding/json"
-	"flag"
 	"net/http"
 	"sync"
 	"text/template"
@@ -16,7 +15,6 @@ import (
 )
 
 var (
-	addr     = flag.String("addr", ":8080", "http service address")
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
@@ -38,29 +36,6 @@ type websocketMessage struct {
 type peerConnectionState struct {
 	peerConnection *webrtc.PeerConnection
 	websocket      *threadSafeWriter
-}
-
-func main() {
-	// Parse the flags passed to program
-	flag.Parse()
-
-	// Init other state
-	trackLocals = map[string]*webrtc.TrackLocalStaticRTP{}
-
-	// websocket handler
-	http.HandleFunc("/websocket", websocketHandler)
-
-	// request a keyframe every 3 seconds
-	go func() {
-		for range time.NewTicker(time.Second * 3).C {
-			dispatchKeyFrame()
-		}
-	}()
-
-	// start HTTP server
-	if err := http.ListenAndServe(*addr, nil); err != nil {
-		log.Errorf("Failed to start http server: %v", err)
-	}
 }
 
 // Add to list of tracks and fire renegotation for all PeerConnections
@@ -97,7 +72,7 @@ func signalPeerConnections() {
 	listLock.Lock()
 	defer func() {
 		listLock.Unlock()
-		dispatchKeyFrame()
+		DispatchKeyFrame()
 	}()
 
 	attemptSync := func() (tryAgain bool) {
@@ -187,8 +162,8 @@ func signalPeerConnections() {
 	}
 }
 
-// dispatchKeyFrame sends a keyframe to all PeerConnections, used everytime a new user joins the call
-func dispatchKeyFrame() {
+// DispatchKeyFrame sends a keyframe to all PeerConnections, used everytime a new user joins the call
+func DispatchKeyFrame() {
 	listLock.Lock()
 	defer listLock.Unlock()
 
@@ -208,7 +183,10 @@ func dispatchKeyFrame() {
 }
 
 // Handle incoming websockets
-func websocketHandler(w http.ResponseWriter, r *http.Request) {
+func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	if trackLocals == nil {
+		trackLocals = make(map[string]*webrtc.TrackLocalStaticRTP)
+	}
 	// Upgrade HTTP request to Websocket
 	unsafeConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
