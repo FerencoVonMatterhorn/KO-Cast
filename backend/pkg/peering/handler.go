@@ -2,11 +2,11 @@ package peering
 
 import (
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
 	"github.com/ferencovonmatterhorn/ko-cast/pkg/utils"
-	"github.com/pion/logging"
 	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
@@ -17,8 +17,6 @@ var (
 	listLock        sync.RWMutex
 	peerConnections []peerConnectionState
 	trackLocals     map[string]*webrtc.TrackLocalStaticRTP
-
-	log = logging.NewDefaultLoggerFactory().NewLogger("KO-Cast")
 )
 
 type websocketMessage struct {

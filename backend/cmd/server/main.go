@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/ferencovonmatterhorn/ko-cast/pkg/config"
 	"github.com/ferencovonmatterhorn/ko-cast/pkg/peering"
 	"github.com/ferencovonmatterhorn/ko-cast/pkg/websocket"
 	log "github.com/sirupsen/logrus"
@@ -9,12 +10,14 @@ import (
 	"time"
 )
 
-var (
-	addr = flag.String("addr", ":8080", "http service address")
-)
-
 func main() {
-	log.SetLevel(log.InfoLevel)
+	cfg, err := config.InitConfig()
+	if err != nil {
+		log.Errorf("Failed to initialize config: %v", err)
+		return
+	}
+	log.SetLevel(cfg.LogLevel)
+
 	// Parse the flags passed to program
 	flag.Parse()
 
@@ -29,8 +32,8 @@ func main() {
 	}()
 
 	// start HTTP server
-	log.Infof("Server is starting on address %s", *addr)
-	if err := http.ListenAndServe(*addr, nil); err != nil {
+	log.Infof("Server is starting on address %s", cfg.Addr)
+	if err := http.ListenAndServe(cfg.Addr, nil); err != nil {
 		log.Errorf("Failed to start http server: %v", err)
 	}
 }
