@@ -7,6 +7,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/ferencovonmatterhorn/ko-cast/pkg/utils"
 	"github.com/gorilla/websocket"
 	"github.com/pion/logging"
 	"github.com/pion/rtcp"
@@ -35,7 +36,7 @@ type websocketMessage struct {
 
 type peerConnectionState struct {
 	peerConnection *webrtc.PeerConnection
-	websocket      *threadSafeWriter
+	websocket      *utils.ThreadSafeWriter
 }
 
 // Add to list of tracks and fire renegotation for all PeerConnections
@@ -194,7 +195,7 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := &threadSafeWriter{unsafeConn, sync.Mutex{}}
+	c := &utils.ThreadSafeWriter{unsafeConn, sync.Mutex{}}
 
 	// When this frame returns close the Websocket
 	defer c.Close()
@@ -345,17 +346,4 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			log.Errorf("unknown message: %+v", message)
 		}
 	}
-}
-
-// Helper to make Gorilla Websockets threadsafe
-type threadSafeWriter struct {
-	*websocket.Conn
-	sync.Mutex
-}
-
-func (t *threadSafeWriter) WriteJSON(v interface{}) error {
-	t.Lock()
-	defer t.Unlock()
-
-	return t.Conn.WriteJSON(v)
 }
