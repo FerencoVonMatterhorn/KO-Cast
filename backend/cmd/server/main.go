@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/ferencovonmatterhorn/ko-cast/pkg/webrtc"
+	"github.com/ferencovonmatterhorn/ko-cast/pkg/peering"
+	"github.com/ferencovonmatterhorn/ko-cast/pkg/websocket"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -18,12 +19,12 @@ func main() {
 	flag.Parse()
 
 	// websocket handler
-	http.HandleFunc("/websocket", webrtc.WebsocketHandler)
+	http.HandleFunc("/websocket", websocket.Handle)
 
 	// request a keyframe every 3 seconds
 	go func() {
 		for range time.NewTicker(time.Second * 3).C {
-			webrtc.DispatchKeyFrame()
+			peering.DispatchKeyFrame()
 		}
 	}()
 
