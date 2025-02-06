@@ -1,60 +1,50 @@
-import {Component, OnInit} from '@angular/core';
+import {Component} from '@angular/core';
 
 @Component({
   selector: 'app-video-player',
   templateUrl: './cast.component.html',
   styleUrls: ['./cast.component.scss']
 })
-export class CastComponent implements OnInit {
+export class CastComponent {
+  private pc: RTCPeerConnection | null = null;
 
-  ngOnInit(): void {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  startScreenShare(): void {
+    navigator.mediaDevices.getDisplayMedia({video: {
+        // Ideal resolution we like to have is 4k and 60 FPS
+        width: { ideal: 3840 },
+        height: { ideal: 2160 },
+        frameRate: { ideal: 60, max: 60 },
+      }, audio: true})
       .then((stream: MediaStream) => {
-        let pc = new RTCPeerConnection();
-
-        pc.ontrack = function (event: RTCTrackEvent) {
-          if (event.track.kind === 'audio') {
-            return;
-          }
-
-          let el = document.createElement(event.track.kind) as HTMLMediaElement;
-          el.srcObject = event.streams[0];
-          el.autoplay = true;
-          el.controls = true;
-          document.getElementById('remoteVideos')?.appendChild(el);
-
-          event.track.onmute = function () {
-            el.play();
-          };
-
-          event.streams[0].onremovetrack = ({ track }) => {
-            if (el.parentNode) {
-              el.parentNode.removeChild(el);
+        this.pc = new RTCPeerConnection({
+          iceServers: [
+            {
+              urls: "stun:stun.l.google.com:19302"
             }
-          };
-        };
+          ]
+        });
 
         const localVideo = document.getElementById('localVideo') as HTMLVideoElement;
         if (localVideo) {
           localVideo.srcObject = stream;
         }
 
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        stream.getTracks().forEach(track => this.pc!.addTrack(track, stream));
 
         let ws = new WebSocket("ws://localhost:8080/websocket");
 
-        pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
+        this.pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
           if (!e.candidate) {
             return;
           }
-          ws.send(JSON.stringify({ event: 'candidate', data: JSON.stringify(e.candidate) }));
+          ws.send(JSON.stringify({event: 'candidate', data: JSON.stringify(e.candidate)}));
         };
 
         ws.onclose = function () {
           window.alert("WebSocket has closed");
         };
 
-        ws.onmessage = function (evt: MessageEvent) {
+        ws.onmessage = (evt: MessageEvent) =>{
           let msg: { event: string, data: string } | null;
           try {
             msg = JSON.parse(evt.data);
@@ -78,10 +68,10 @@ export class CastComponent implements OnInit {
                 return;
               }
 
-              pc.setRemoteDescription(new RTCSessionDescription(offer));
-              pc.createAnswer().then(answer => {
-                pc.setLocalDescription(answer);
-                ws.send(JSON.stringify({ event: 'answer', data: JSON.stringify(answer) }));
+              this.pc!.setRemoteDescription(new RTCSessionDescription(offer));
+              this.pc!.createAnswer().then(answer => {
+                this.pc!.setLocalDescription(answer);
+                ws.send(JSON.stringify({event: 'answer', data: JSON.stringify(answer)}));
               });
               return;
 
@@ -96,7 +86,7 @@ export class CastComponent implements OnInit {
                 return;
               }
 
-              pc.addIceCandidate(new RTCIceCandidate(candidate));
+              this.pc!.addIceCandidate(new RTCIceCandidate(candidate));
           }
         };
 
@@ -106,6 +96,26 @@ export class CastComponent implements OnInit {
       })
       .catch((error: Error) => {
         console.error("Error accessing display media:", error);
+        this.stopScreenShare();
       });
+  }
+
+  stopScreenShare() {
+    if (this.pc) {
+      this.pc.ontrack = null;
+      this.pc.onicecandidate = null;
+      this.pc.oniceconnectionstatechange = null;
+      this.pc.onsignalingstatechange = null;
+      this.pc.onicegatheringstatechange = null;
+      this.pc.onnegotiationneeded = null;
+
+      const localVideo = document.getElementById('localVideo') as HTMLVideoElement;
+      if (localVideo.srcObject) {
+        (<MediaStream>localVideo.srcObject).getTracks().forEach(track => track.stop());
+      }
+
+      this.pc.close();
+      this.pc = null;
+    }
   }
 }
