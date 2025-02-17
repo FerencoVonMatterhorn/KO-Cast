@@ -42,7 +42,7 @@ export class HomeComponent implements OnInit{
     };
 
 
-    let ws =  new WebSocket("wss://ko-cast.asceric.site:8080/websocket");
+    let ws =  new WebSocket("ws://ko-cast.asceric.site:8080/websocket");
 
     pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
       if (!e.candidate) {

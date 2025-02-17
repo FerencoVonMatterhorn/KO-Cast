@@ -31,7 +31,7 @@ export class CastComponent {
 
         stream.getTracks().forEach(track => this.pc!.addTrack(track, stream));
 
-        let ws = new WebSocket("wss://ko-cast.asceric.site:8080/websocket");
+        let ws = new WebSocket("ws://ko-cast.asceric.site:8080/websocket");
 
         this.pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
           if (!e.candidate) {
