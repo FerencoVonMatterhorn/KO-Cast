@@ -8,7 +8,7 @@ on:
       - backend/**
 
 jobs:
-  docker:
+  docker-build-push-backend:
     runs-on: ubuntu-latest
     steps:
       -

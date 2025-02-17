@@ -1,0 +1,12 @@
+services:
+  frontend:
+    image: ferenco42/ko-cast-frontend:latest
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  backend:
+    image: ferenco42/ko-cast-backend:latest
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
