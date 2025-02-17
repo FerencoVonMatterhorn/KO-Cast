@@ -42,7 +42,7 @@ export class HomeComponent implements OnInit{
     };
 
 
-    let ws =  new WebSocket("ws://192.168.188.70:8080/websocket");
+    let ws =  new WebSocket("ws://ferencoo.myfritz.link:8080/websocket");
 
     pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
       if (!e.candidate) {

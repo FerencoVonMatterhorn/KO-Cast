@@ -31,7 +31,7 @@ export class CastComponent {
 
         stream.getTracks().forEach(track => this.pc!.addTrack(track, stream));
 
-        let ws = new WebSocket("ws://localhost:8080/websocket");
+        let ws = new WebSocket("ws://ferencoo.myfritz.link:8080/websocket");
 
         this.pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
           if (!e.candidate) {
