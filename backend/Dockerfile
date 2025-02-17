@@ -18,4 +18,6 @@ FROM alpine:3.21 AS production
 
 COPY --from=builder /app/ko-cast .
 
+EXPOSE 8080
+
 ENTRYPOINT ["./ko-cast"]
