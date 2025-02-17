@@ -33,7 +33,7 @@ func main() {
 
 	// start HTTP server
 	log.Infof("Server is starting on address %s", cfg.Addr)
-	if err := http.ListenAndServe(cfg.Addr, nil); err != nil {
+	if err := http.ListenAndServeTLS(cfg.Addr, nil); err != nil {
 		log.Errorf("Failed to start http server: %v", err)
 	}
 }
