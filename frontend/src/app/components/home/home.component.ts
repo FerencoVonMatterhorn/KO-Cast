@@ -45,11 +45,16 @@ export class HomeComponent implements OnInit{
     let ws =  new WebSocket("wss://api.feren.co/websocket");
 
     pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
+
       if (!e.candidate) {
         return;
       }
       ws.send(JSON.stringify({ event: 'candidate', data: JSON.stringify(e.candidate) }));
     };
+
+    pc.onconnectionstatechange = function () {
+      console.log("Connection state: " + pc.connectionState)
+    }
 
     ws.onclose = function () {
       window.alert("WebSocket has closed");
