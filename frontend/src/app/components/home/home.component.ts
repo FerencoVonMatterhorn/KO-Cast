@@ -17,7 +17,9 @@ export class HomeComponent implements OnInit{
     });
 
     pc.ontrack = function (event: RTCTrackEvent) {
+      console.log("Track received");
       if (event.track.kind === 'audio') {
+        console.log("Audio track received");
         return;
       }
 
@@ -28,7 +30,7 @@ export class HomeComponent implements OnInit{
       document.getElementById('remoteVideos')?.appendChild(el);
 
       event.track.onmute = function () {
-        el.play();
+        el.play().then(r => console.log("Playing")).catch(e => console.log("Failed to play"));
       };
 
       event.streams[0].onremovetrack = ({ track }) => {
@@ -49,8 +51,13 @@ export class HomeComponent implements OnInit{
       if (!e.candidate) {
         return;
       }
+      console.log("ICE Candidate: " + e.candidate.candidate);
       ws.send(JSON.stringify({ event: 'candidate', data: JSON.stringify(e.candidate) }));
     };
+
+    pc.onicecandidateerror = (e) => {
+      console.log(e);
+    }
 
     pc.onconnectionstatechange = function () {
       console.log("Connection state: " + pc.connectionState)
