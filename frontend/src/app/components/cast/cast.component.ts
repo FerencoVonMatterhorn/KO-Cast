@@ -9,12 +9,7 @@ export class CastComponent {
   private pc: RTCPeerConnection | null = null;
 
   startScreenShare(): void {
-    navigator.mediaDevices.getDisplayMedia({video: {
-        // Ideal resolution we like to have is 4k and 60 FPS
-        width: { ideal: 3840 },
-        height: { ideal: 2160 },
-        frameRate: { ideal: 60, max: 60 },
-      }, audio: true})
+    navigator.mediaDevices.getDisplayMedia({video: true, audio: true})
       .then((stream: MediaStream) => {
         this.pc = new RTCPeerConnection({
           iceServers: [
@@ -29,7 +24,10 @@ export class CastComponent {
           localVideo.srcObject = stream;
         }
 
-        stream.getTracks().forEach(track => this.pc!.addTrack(track, stream));
+        stream.getTracks().forEach(track => {
+          console.log('Adding track:', track);
+          this.pc!.addTrack(track, stream)
+        });
 
         let ws = new WebSocket("wss://api.feren.co/websocket");
 
