@@ -16,34 +16,6 @@ export class HomeComponent implements OnInit{
       ]
     });
 
-    pc.ontrack = function (event: RTCTrackEvent) {
-      console.log("Track received");
-      if (event.track.kind === 'audio') {
-        console.log("Audio track received");
-        return;
-      }
-
-      let el = document.getElementById("video-player") as HTMLMediaElement;
-      el.srcObject = event.streams[0];
-      el.autoplay = true;
-      el.controls = true;
-      document.getElementById('remoteVideos')?.appendChild(el);
-
-      event.track.onmute = function () {
-        el.play().then(r => console.log("Playing")).catch(e => console.log("Failed to play"));
-      };
-
-      event.streams[0].onremovetrack = ({ track }) => {
-        let stream = (document.getElementById("video-player") as HTMLMediaElement).srcObject;
-        let trackList = (<MediaStream>stream).getTracks();
-
-        if (trackList.length == 0) {
-          console.log("Stream has ended");
-        }
-      };
-    };
-
-
     let ws =  new WebSocket("wss://api.feren.co/websocket");
 
     pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
@@ -113,6 +85,33 @@ export class HomeComponent implements OnInit{
           pc.addIceCandidate(new RTCIceCandidate(candidate));
         }
       }
+    };
+
+    pc.ontrack = function (event: RTCTrackEvent) {
+      console.log("Track received");
+      if (event.track.kind === 'audio') {
+        console.log("Audio track received");
+        return;
+      }
+
+      let el = document.getElementById("video-player") as HTMLMediaElement;
+      el.srcObject = event.streams[0];
+      el.autoplay = true;
+      el.controls = true;
+      document.getElementById('remoteVideos')?.appendChild(el);
+
+      event.track.onmute = function () {
+        el.play().then(r => console.log("Playing")).catch(e => console.log("Failed to play"));
+      };
+
+      event.streams[0].onremovetrack = ({ track }) => {
+        let stream = (document.getElementById("video-player") as HTMLMediaElement).srcObject;
+        let trackList = (<MediaStream>stream).getTracks();
+
+        if (trackList.length == 0) {
+          console.log("Stream has ended");
+        }
+      };
     };
 
     ws.onerror = function (evt: Event) {
