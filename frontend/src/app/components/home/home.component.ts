@@ -18,6 +18,13 @@ export class HomeComponent implements OnInit{
 
     let ws =  new WebSocket("wss://api.feren.co/websocket");
 
+    pc.onnegotiationneeded = () => {
+      pc.createOffer().then(offer => {
+        pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({ event: 'offer', data: JSON.stringify(offer) }));
+      });
+    }
+
     pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
 
       if (!e.candidate) {

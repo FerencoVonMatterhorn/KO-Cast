@@ -29,6 +29,25 @@ export class CastComponent {
           this.pc!.addTrack(track, stream)
         });
 
+        // Handle negotiationneeded event
+        this.pc.onnegotiationneeded = async () => {
+          console.log("Negotiation needed");
+
+          try {
+            // Create an offer when negotiation is needed
+            const offer = await this.pc!.createOffer();
+            await this.pc!.setLocalDescription(offer);
+            console.log("Offer created and local description set");
+
+            // Send the offer to the remote peer through WebSocket
+            if (ws) {
+              ws.onopen = () => ws.send(JSON.stringify({ event: 'offer', data: JSON.stringify(offer) }));
+            }
+          } catch (err) {
+            console.error("Error creating offer:", err);
+          }
+        };
+
         let ws = new WebSocket("wss://api.feren.co/websocket");
 
         this.pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
