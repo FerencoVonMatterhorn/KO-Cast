@@ -54,7 +54,7 @@ export class CastComponent {
           if (!e.candidate) {
             return;
           }
-          ws.send(JSON.stringify({event: 'candidate', data: JSON.stringify(e.candidate)}));
+          ws.onopen = () => ws.send(JSON.stringify({event: 'candidate', data: JSON.stringify(e.candidate)}));
         };
 
         ws.onclose = function () {
