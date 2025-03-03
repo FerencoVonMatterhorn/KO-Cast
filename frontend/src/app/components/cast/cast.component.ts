@@ -75,6 +75,7 @@ export class CastComponent {
 
           switch (msg.event) {
             case 'offer':
+              console.log("Received offer: " + msg.data);
               let offer: RTCSessionDescriptionInit | null;
               try {
                 offer = JSON.parse(msg.data);
@@ -93,6 +94,7 @@ export class CastComponent {
               return;
 
             case 'candidate':
+              console.log("Received ICE candidate: " + msg.data);
               let candidate: RTCIceCandidateInit | null;
               try {
                 candidate = JSON.parse(msg.data);
