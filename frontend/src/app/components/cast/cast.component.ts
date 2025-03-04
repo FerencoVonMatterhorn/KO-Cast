@@ -1,140 +1,125 @@
-import {Component} from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 
 @Component({
   selector: 'app-video-player',
   templateUrl: './cast.component.html',
   styleUrls: ['./cast.component.scss']
 })
-export class CastComponent {
-  private pc: RTCPeerConnection | null = null;
+export class CastComponent implements OnInit {
+  private peerConnection!: RTCPeerConnection;
+  private ws!: WebSocket;
+  private readonly iceCandidatesQueue: RTCIceCandidateInit[] = [];
+  private localStream!: MediaStream | null;
 
-  startScreenShare(): void {
-    navigator.mediaDevices.getDisplayMedia({video: true, audio: true})
-      .then((stream: MediaStream) => {
-        this.pc = new RTCPeerConnection({
-          iceServers: [
-            {
-              urls: "stun:stun.l.google.com:19302"
-            }
-          ]
-        });
-
-        const localVideo = document.getElementById('localVideo') as HTMLVideoElement;
-        if (localVideo) {
-          localVideo.srcObject = stream;
-        }
-
-        stream.getTracks().forEach(track => {
-          console.log('Adding track:', track);
-          this.pc!.addTrack(track, stream)
-        });
-
-        // Handle negotiationneeded event
-        this.pc.onnegotiationneeded = async () => {
-          console.log("Negotiation needed");
-
-          try {
-            // Create an offer when negotiation is needed
-            const offer = await this.pc!.createOffer();
-            await this.pc!.setLocalDescription(offer);
-            console.log("Offer created and local description set");
-
-            // Send the offer to the remote peer through WebSocket
-            if (ws) {
-              ws.onopen = () => ws.send(JSON.stringify({ event: 'offer', data: JSON.stringify(offer) }));
-            }
-          } catch (err) {
-            console.error("Error creating offer:", err);
-          }
-        };
-
-        let ws = new WebSocket("wss://api.feren.co/websocket");
-
-        this.pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
-          if (!e.candidate) {
-            return;
-          }
-          ws.onopen = () => ws.send(JSON.stringify({event: 'candidate', data: JSON.stringify(e.candidate)}));
-        };
-
-        ws.onclose = function () {
-          window.alert("WebSocket has closed");
-        };
-
-        ws.onmessage = (evt: MessageEvent) =>{
-          let msg: { event: string, data: string } | null;
-          try {
-            msg = JSON.parse(evt.data);
-          } catch {
-            return console.log('Failed to parse message');
-          }
-
-          if (!msg) {
-            return;
-          }
-
-          switch (msg.event) {
-            case 'offer':
-              console.log("Received offer: " + msg.data);
-              let offer: RTCSessionDescriptionInit | null;
-              try {
-                offer = JSON.parse(msg.data);
-              } catch {
-                return console.log('Failed to parse offer');
-              }
-              if (!offer) {
-                return;
-              }
-
-              this.pc!.setRemoteDescription(new RTCSessionDescription(offer));
-              this.pc!.createAnswer().then(answer => {
-                this.pc!.setLocalDescription(answer);
-                ws.send(JSON.stringify({event: 'answer', data: JSON.stringify(answer)}));
-              });
-              return;
-
-            case 'candidate':
-              console.log("Received ICE candidate: " + msg.data);
-              let candidate: RTCIceCandidateInit | null;
-              try {
-                candidate = JSON.parse(msg.data);
-              } catch {
-                return console.log('Failed to parse candidate');
-              }
-              if (!candidate) {
-                return;
-              }
-
-              this.pc!.addIceCandidate(new RTCIceCandidate(candidate));
-          }
-        };
-
-        ws.onerror = function (evt: Event) {
-          console.log("ERROR: " + (evt as ErrorEvent).message);
-        };
-      })
-      .catch((error: Error) => {
-        console.error("Error accessing display media:", error);
-        this.stopScreenShare();
-      });
+  ngOnInit(): void {
+    this.initializeWebSocket();
   }
 
-  stopScreenShare() {
-    if (this.pc) {
-      this.pc.ontrack = null;
-      this.pc.onicecandidate = null;
-      this.pc.oniceconnectionstatechange = null;
-      this.pc.onsignalingstatechange = null;
-      this.pc.onicegatheringstatechange = null;
-      this.pc.onnegotiationneeded = null;
+  initializeWebSocket() {
+    this.ws =new WebSocket("wss://api.feren.co/websocket");
 
-      const localVideo = document.getElementById('localVideo') as HTMLVideoElement;
-      if (localVideo.srcObject) {
-        (<MediaStream>localVideo.srcObject).getTracks().forEach(track => track.stop());
+    this.ws.onmessage = async (message) => {
+      const data = JSON.parse(message.data);
+
+      console.log("Received WebRTC message:", data);
+
+      // Ensure PeerConnection is initialized
+      if (!this.peerConnection) {
+        console.log("PeerConnection not initialized. Initializing now...");
+        this.setupWebRTC();
       }
 
-      this.pc.close();
-      this.pc = null;
+      if (data.event === 'offer') {
+        if (!this.peerConnection.remoteDescription) {
+          let offer: RTCSessionDescriptionInit;
+          try {
+            offer = JSON.parse(data.data);
+          } catch {
+            return console.log('Failed to parse offer');
+          }
+          await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+          const answer = await this.peerConnection.createAnswer();
+          await this.peerConnection.setLocalDescription(answer);
+          this.ws.send(JSON.stringify({ event: 'answer', data: JSON.stringify(answer) }));
+
+          // Add any ICE candidates that were received before remote description was set
+          this.processQueuedCandidates();
+        }
+      }
+
+      if (data.event === 'answer') {
+        let answer: RTCSessionDescriptionInit;
+        try {
+          answer = JSON.parse(data.data);
+        }
+        catch {
+          return console.log('Failed to parse answer');
+        }
+        await this.peerConnection.setRemoteDescription(answer);
+        this.processQueuedCandidates();
+      }
+
+      if (data.event === 'candidate') {
+        let candidate: RTCIceCandidateInit;
+        try {
+          candidate = JSON.parse(data.data);
+        } catch {
+          return console.log('Failed to parse candidate');
+        }
+        if (this.peerConnection.remoteDescription) {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          console.log("Remote description not set yet. Queuing ICE candidate.");
+          this.iceCandidatesQueue.push(new RTCIceCandidate(candidate));
+        }
+      }
+    };
+  }
+
+  async startScreenShare() {
+    try {
+      this.localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+
+      const videoElement = document.querySelector('video');
+      if (videoElement) videoElement.srcObject = this.localStream;
+
+      this.setupWebRTC();
+    } catch (error) {
+      console.error('Error accessing screen share:', error);
+    }
+  }
+
+  setupWebRTC() {
+    if (!this.peerConnection) {
+      this.peerConnection = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      if (this.localStream) {
+        this.localStream.getTracks().forEach(track => {
+          this.peerConnection.addTrack(track, this.localStream!);
+        });
+      } else {
+        console.error("Local stream is not initialized yet!");
+      }
+
+      this.peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          this.ws.send(JSON.stringify({ event: 'candidate', data: JSON.stringify(event.candidate) }));
+        }
+      };
+
+      this.peerConnection.onnegotiationneeded = async () => {
+        const offer = await this.peerConnection.createOffer();
+        await this.peerConnection.setLocalDescription(offer);
+        this.ws.send(JSON.stringify({ event: 'offer', data: JSON.stringify(offer) }));
+      };
+    }
+  }
+
+  processQueuedCandidates() {
+    while (this.iceCandidatesQueue.length > 0) {
+      this.peerConnection.addIceCandidate(this.iceCandidatesQueue.shift());
     }
   }
 }
